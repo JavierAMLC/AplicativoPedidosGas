@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Primax Gas - Pedidos"
+version = "1.0.0"
+id = "artifacts/primax"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24802
+
+[services.development]
+run = "pnpm --filter @workspace/primax run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/primax", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/primax/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24802"
+BASE_PATH = "/"
