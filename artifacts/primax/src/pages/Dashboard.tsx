@@ -1,15 +1,14 @@
 import { useListOrders } from "@workspace/api-client-react";
 import { SummaryHeader } from "@/components/dashboard/SummaryHeader";
 import { OrderCard } from "@/components/order/OrderCard";
-import { format } from "date-fns";
 import { AlertCircle, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
-  const today = format(new Date(), 'yyyy-MM-dd');
-  
+  // No enviamos `date` — el servidor usa su reloj UTC, que coincide con los timestamps guardados.
+  // Pasar la fecha local del cliente causaría un desfase de zona horaria (Perú UTC-5).
   const { data: orders, isLoading, error, refetch, isRefetching } = useListOrders(
-    { date: today },
+    {},
     {
       query: {
         refetchInterval: 15000,
