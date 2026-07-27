@@ -1,7 +1,7 @@
-import { useListOrders } from "@workspace/api-client-react";
+import { useListOrders, getListOrdersQueryKey } from "@workspace/api-client-react";
 import { SummaryHeader } from "@/components/dashboard/SummaryHeader";
 import { OrderCard } from "@/components/order/OrderCard";
-import { AlertCircle, RotateCw } from "lucide-react";
+import { CircleAlert as AlertCircle, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
@@ -11,6 +11,7 @@ export default function Dashboard() {
     {},
     {
       query: {
+        queryKey: getListOrdersQueryKey({}),
         refetchInterval: 15000,
         refetchOnMount: "always",
       }

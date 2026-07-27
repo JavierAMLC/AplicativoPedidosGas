@@ -1,11 +1,12 @@
-import { useGetTodaySummary } from "@workspace/api-client-react";
+import { useGetTodaySummary, getGetTodaySummaryQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Activity, CheckCircle2, Clock, Truck, TrendingUp } from "lucide-react";
+import { Activity, CircleCheck as CheckCircle2, Clock, Truck, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function SummaryHeader() {
   const { data: summary, isLoading } = useGetTodaySummary({
     query: {
+      queryKey: getGetTodaySummaryQueryKey(),
       refetchInterval: 30000 // refresh every 30s
     }
   });

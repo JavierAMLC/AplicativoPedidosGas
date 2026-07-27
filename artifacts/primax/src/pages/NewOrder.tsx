@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLocation } from "wouter";
-import { useCreateOrder, useListCustomers, getListOrdersQueryKey, getGetTodaySummaryQueryKey } from "@workspace/api-client-react";
+import { useCreateOrder, useListCustomers, getListOrdersQueryKey, getGetTodaySummaryQueryKey, getListCustomersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSettings } from "@/hooks/use-settings";
 
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, User, MapPin, Phone, Check } from "lucide-react";
+import { Loader as Loader2, Search, User, MapPin, Phone, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Debounce hook
@@ -64,7 +64,7 @@ export default function NewOrder() {
 
   const { data: customers, isLoading: isSearching } = useListCustomers(
     { q: debouncedSearch },
-    { query: { enabled: debouncedSearch.length >= 2 } }
+    { query: { queryKey: getListCustomersQueryKey({ q: debouncedSearch }), enabled: debouncedSearch.length >= 2 } }
   );
 
   const form = useForm<FormValues>({
