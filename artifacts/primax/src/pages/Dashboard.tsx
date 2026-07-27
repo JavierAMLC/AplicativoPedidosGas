@@ -12,7 +12,8 @@ export default function Dashboard() {
     { date: today },
     {
       query: {
-        refetchInterval: 15000 // Auto refresh every 15s for command center feel
+        refetchInterval: 15000,
+        refetchOnMount: "always",
       }
     }
   );

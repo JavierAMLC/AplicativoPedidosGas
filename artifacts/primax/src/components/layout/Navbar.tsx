@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Flame, LayoutDashboard, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SettingsDialog } from "@/components/settings/SettingsDialog";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -15,7 +16,7 @@ export function Navbar() {
           <span className="font-bold text-lg tracking-tight">PRIMAX GAS</span>
         </div>
 
-        <nav className="flex items-center gap-2">
+        <nav className="flex items-center gap-1">
           <Link
             href="/"
             className={cn(
@@ -28,6 +29,7 @@ export function Navbar() {
             <LayoutDashboard className="w-4 h-4" />
             Tablero
           </Link>
+          <SettingsDialog />
           <Link
             href="/nuevo"
             className={cn(

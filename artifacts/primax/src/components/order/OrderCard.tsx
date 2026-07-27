@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Phone, MessageCircle, ArrowRight, User, Package, CreditCard, Banknote } from "lucide-react";
 import { useUpdateOrderStatus, getListOrdersQueryKey, getGetTodaySummaryQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSettings } from "@/hooks/use-settings";
 
 const statusLabels: Record<OrderStatus, string> = {
   pending: "Pendiente",
@@ -23,6 +24,7 @@ const paymentLabels: Record<string, string> = {
 export function OrderCard({ order }: { order: Order }) {
   const queryClient = useQueryClient();
   const updateStatus = useUpdateOrderStatus();
+  const { settings } = useSettings();
 
   const handleNextStatus = () => {
     let nextStatus: OrderStatus | null = null;
@@ -51,7 +53,8 @@ export function OrderCard({ order }: { order: Order }) {
 💳 Pago: ${paymentLabels[order.paymentMethod] || order.paymentMethod}${order.paymentMethod === 'cash' && order.cashAmount ? ` (Paga con S/ ${order.cashAmount})` : ''}
 💵 Total: S/ ${order.totalAmount.toFixed(2)}`;
 
-    return `https://wa.me/?text=${encodeURIComponent(text)}`;
+    const number = settings.whatsappNumber.trim();
+    return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
   };
 
   const isPending = updateStatus.isPending;

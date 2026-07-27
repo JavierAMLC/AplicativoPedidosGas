@@ -5,6 +5,7 @@ import * as z from "zod";
 import { useLocation } from "wouter";
 import { useCreateOrder, useListCustomers, getListOrdersQueryKey, getGetTodaySummaryQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSettings } from "@/hooks/use-settings";
 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -40,12 +41,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const products = [
-  "Balón 10kg",
-  "Balón 45kg",
-  "Balón 5kg",
-  "Gasolina"
-];
+// products now come from settings (see useSettings hook)
 
 const paymentMethods = [
   { id: "cash", label: "Efectivo" },
@@ -58,6 +54,8 @@ export default function NewOrder() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const createOrder = useCreateOrder();
+  const { settings } = useSettings();
+  const products = settings.products;
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
@@ -77,10 +75,10 @@ export default function NewOrder() {
       customerPhone: "",
       customerAddress: "",
       customerReference: "",
-      product: "Balón 10kg",
+      product: "",
       paymentMethod: "cash",
       cashAmount: null,
-      totalAmount: 40, // Default common price
+      totalAmount: 0,
       notes: "",
     },
   });
@@ -294,17 +292,29 @@ export default function NewOrder() {
                           {products.map((prod) => (
                             <button
                               type="button"
-                              key={prod}
+                              key={prod.id}
                               className={cn(
-                                "flex items-center justify-center py-2 px-3 rounded-md text-sm border font-medium transition-all",
-                                field.value === prod
+                                "flex flex-col items-center justify-center py-2 px-3 rounded-md text-sm border font-medium transition-all gap-0.5",
+                                field.value === prod.name
                                   ? "bg-primary text-primary-foreground border-primary shadow-sm"
                                   : "bg-card text-foreground border-border hover:border-primary/50 hover:bg-muted/50"
                               )}
-                              onClick={() => field.onChange(prod)}
+                              onClick={() => {
+                                field.onChange(prod.name);
+                                if (prod.price > 0) {
+                                  form.setValue("totalAmount", prod.price);
+                                }
+                              }}
                             >
-                              {field.value === prod && <Check className="w-3.5 h-3.5 mr-1.5" />}
-                              {prod}
+                              <span className="flex items-center gap-1">
+                                {field.value === prod.name && <Check className="w-3 h-3" />}
+                                {prod.name}
+                              </span>
+                              {prod.price > 0 && (
+                                <span className={cn("text-[10px] font-normal", field.value === prod.name ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                                  S/ {prod.price.toFixed(2)}
+                                </span>
+                              )}
                             </button>
                           ))}
                         </div>
