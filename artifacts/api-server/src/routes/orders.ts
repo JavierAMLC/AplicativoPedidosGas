@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, gte, lt, sql } from "drizzle-orm";
+import { eq, and, gte, lt } from "drizzle-orm";
 import { db, customersTable, ordersTable } from "@workspace/db";
 import {
   ListOrdersQueryParams,
@@ -11,21 +11,21 @@ import {
 
 const router: IRouter = Router();
 
-function formatOrder(row: {
-  order: typeof ordersTable.$inferSelect;
-  customer: typeof customersTable.$inferSelect;
-}) {
+function formatOrder(
+  order: typeof ordersTable.$inferSelect,
+  customer: typeof customersTable.$inferSelect,
+) {
   return {
-    id: row.order.id,
-    customer: row.customer,
-    product: row.order.product,
-    paymentMethod: row.order.paymentMethod,
-    cashAmount: row.order.cashAmount != null ? Number(row.order.cashAmount) : null,
-    totalAmount: Number(row.order.totalAmount),
-    status: row.order.status,
-    notes: row.order.notes ?? null,
-    createdAt: row.order.createdAt,
-    updatedAt: row.order.updatedAt,
+    id: order.id,
+    customer,
+    product: order.product,
+    paymentMethod: order.paymentMethod,
+    cashAmount: order.cashAmount != null ? Number(order.cashAmount) : null,
+    totalAmount: Number(order.totalAmount),
+    status: order.status,
+    notes: order.notes ?? null,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
   };
 }
 
@@ -64,10 +64,7 @@ router.get("/orders", async (req, res): Promise<void> => {
 
   const { date, status } = query.data;
 
-  // Default to today if no date provided
-  const targetDate = date
-    ? new Date(date)
-    : new Date();
+  const targetDate = date ? new Date(date) : new Date();
   const startOfDay = new Date(
     targetDate.getFullYear(),
     targetDate.getMonth(),
@@ -94,7 +91,7 @@ router.get("/orders", async (req, res): Promise<void> => {
     .where(and(...conditions))
     .orderBy(ordersTable.createdAt);
 
-  res.json(rows.map(formatOrder));
+  res.json(rows.map((r) => formatOrder(r.order, r.customer)));
 });
 
 router.post("/orders", async (req, res): Promise<void> => {
@@ -105,11 +102,20 @@ router.post("/orders", async (req, res): Promise<void> => {
   }
 
   const body = parsed.data;
+  let customerId: number;
 
-  let customerId = body.customerId ?? null;
-
-  // If no existing customerId, create or update customer record
-  if (!customerId) {
+  if (body.customerId != null) {
+    customerId = body.customerId;
+    // Update customer info to latest
+    await db
+      .update(customersTable)
+      .set({
+        name: body.customerName,
+        address: body.customerAddress,
+        reference: body.customerReference,
+      })
+      .where(eq(customersTable.id, customerId));
+  } else {
     // Try to find existing customer by phone
     const [existing] = await db
       .select()
@@ -118,19 +124,17 @@ router.post("/orders", async (req, res): Promise<void> => {
       .limit(1);
 
     if (existing) {
-      // Update their address/reference with the latest info
-      const [updated] = await db
+      await db
         .update(customersTable)
         .set({
           name: body.customerName,
           address: body.customerAddress,
           reference: body.customerReference,
         })
-        .where(eq(customersTable.id, existing.id))
-        .returning();
-      customerId = updated.id;
+        .where(eq(customersTable.id, existing.id));
+      customerId = existing.id;
     } else {
-      const [created] = await db
+      const [result] = await db
         .insert(customersTable)
         .values({
           name: body.customerName,
@@ -138,12 +142,12 @@ router.post("/orders", async (req, res): Promise<void> => {
           address: body.customerAddress,
           reference: body.customerReference,
         })
-        .returning();
-      customerId = created.id;
+        .$returningId();
+      customerId = result.id;
     }
   }
 
-  const [order] = await db
+  const [orderResult] = await db
     .insert(ordersTable)
     .values({
       customerId,
@@ -154,14 +158,19 @@ router.post("/orders", async (req, res): Promise<void> => {
       status: "pending",
       notes: body.notes ?? null,
     })
-    .returning();
+    .$returningId();
+
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.id, orderResult.id));
 
   const [customer] = await db
     .select()
     .from(customersTable)
     .where(eq(customersTable.id, customerId));
 
-  res.status(201).json(formatOrder({ order, customer }));
+  res.status(201).json(formatOrder(order, customer));
 });
 
 router.get("/orders/:id", async (req, res): Promise<void> => {
@@ -185,7 +194,7 @@ router.get("/orders/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(formatOrder(row));
+  res.json(formatOrder(row.order, row.customer));
 });
 
 router.patch("/orders/:id", async (req, res): Promise<void> => {
@@ -201,23 +210,26 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [order] = await db
+  await db
     .update(ordersTable)
     .set({ status: parsed.data.status })
-    .where(eq(ordersTable.id, params.data.id))
-    .returning();
+    .where(eq(ordersTable.id, params.data.id));
 
-  if (!order) {
+  const [row] = await db
+    .select({
+      order: ordersTable,
+      customer: customersTable,
+    })
+    .from(ordersTable)
+    .innerJoin(customersTable, eq(ordersTable.customerId, customersTable.id))
+    .where(eq(ordersTable.id, params.data.id));
+
+  if (!row) {
     res.status(404).json({ error: "Order not found" });
     return;
   }
 
-  const [customer] = await db
-    .select()
-    .from(customersTable)
-    .where(eq(customersTable.id, order.customerId));
-
-  res.json(formatOrder({ order, customer }));
+  res.json(formatOrder(row.order, row.customer));
 });
 
 export default router;

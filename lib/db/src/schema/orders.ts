@@ -1,21 +1,21 @@
-import { pgTable, text, serial, timestamp, integer, numeric } from "drizzle-orm/pg-core";
+import { mysqlTable, varchar, text, int, timestamp, decimal } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { customersTable } from "./customers";
 
-export const ordersTable = pgTable("orders", {
-  id: serial("id").primaryKey(),
-  customerId: integer("customer_id")
+export const ordersTable = mysqlTable("orders", {
+  id: int("id").primaryKey().autoincrement(),
+  customerId: int("customer_id")
     .notNull()
     .references(() => customersTable.id),
-  product: text("product").notNull(),
-  paymentMethod: text("payment_method").notNull(), // 'cash' | 'yape_plin' | 'pos_card'
-  cashAmount: numeric("cash_amount", { precision: 10, scale: 2 }),
-  totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull(),
-  status: text("status").notNull().default("pending"), // 'pending' | 'in_transit' | 'delivered'
+  product: varchar("product", { length: 100 }).notNull(),
+  paymentMethod: varchar("payment_method", { length: 50 }).notNull(),
+  cashAmount: decimal("cash_amount", { precision: 10, scale: 2 }),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
   notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdateFn(() => new Date()),
 });
 
 export const insertOrderSchema = createInsertSchema(ordersTable).omit({

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { ilike, or } from "drizzle-orm";
+import { eq, like, or } from "drizzle-orm";
 import { db, customersTable } from "@workspace/db";
 import {
   ListCustomersQueryParams,
@@ -28,8 +28,8 @@ router.get("/customers", async (req, res): Promise<void> => {
       .from(customersTable)
       .where(
         or(
-          ilike(customersTable.name, pattern),
-          ilike(customersTable.phone, pattern),
+          like(customersTable.name, pattern),
+          like(customersTable.phone, pattern),
         ),
       )
       .orderBy(customersTable.name)
@@ -52,10 +52,15 @@ router.post("/customers", async (req, res): Promise<void> => {
     return;
   }
 
-  const [customer] = await db
+  const [result] = await db
     .insert(customersTable)
     .values(parsed.data)
-    .returning();
+    .$returningId();
+
+  const [customer] = await db
+    .select()
+    .from(customersTable)
+    .where(eq(customersTable.id, result.id));
 
   res.status(201).json(customer);
 });
@@ -70,9 +75,7 @@ router.get("/customers/:id", async (req, res): Promise<void> => {
   const [customer] = await db
     .select()
     .from(customersTable)
-    .where(
-      (await import("drizzle-orm")).eq(customersTable.id, params.data.id),
-    );
+    .where(eq(customersTable.id, params.data.id));
 
   if (!customer) {
     res.status(404).json({ error: "Customer not found" });
@@ -95,13 +98,15 @@ router.put("/customers/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const { eq } = await import("drizzle-orm");
-
-  const [customer] = await db
+  await db
     .update(customersTable)
     .set(parsed.data)
-    .where(eq(customersTable.id, params.data.id))
-    .returning();
+    .where(eq(customersTable.id, params.data.id));
+
+  const [customer] = await db
+    .select()
+    .from(customersTable)
+    .where(eq(customersTable.id, params.data.id));
 
   if (!customer) {
     res.status(404).json({ error: "Customer not found" });
