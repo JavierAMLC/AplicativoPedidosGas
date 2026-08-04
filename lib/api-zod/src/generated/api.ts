@@ -21,7 +21,9 @@ export const HealthCheckResponse = zod.object({
  * @summary List all customers
  */
 export const ListCustomersQueryParams = zod.object({
-  "q": zod.coerce.string().optional().describe('Search by name or phone')
+  "q": zod.coerce.string().optional().describe('Search by name or phone'),
+  "page": zod.coerce.number().int().positive().optional().describe('Page number, defaults to 1'),
+  "limit": zod.coerce.number().int().positive().optional().describe('Page size, defaults to 20')
 })
 
 export const ListCustomersResponseItem = zod.object({
@@ -105,7 +107,9 @@ export const UpdateCustomerResponse = zod.object({
  */
 export const ListOrdersQueryParams = zod.object({
   "date": zod.coerce.string().optional().describe('Filter by date (YYYY-MM-DD), defaults to today'),
-  "status": zod.enum(['pending', 'in_transit', 'delivered']).optional().describe('Filter by status')
+  "status": zod.enum(['pending', 'in_transit', 'delivered']).optional().describe('Filter by status'),
+  "page": zod.coerce.number().int().positive().optional().describe('Page number, defaults to 1'),
+  "limit": zod.coerce.number().int().positive().optional().describe('Page size, defaults to 20')
 })
 
 export const ListOrdersResponseItem = zod.object({
@@ -240,6 +244,25 @@ export const GetTodaySummaryResponse = zod.object({
   "inTransit": zod.number(),
   "delivered": zod.number(),
   "totalRevenue": zod.number()
+})
+
+export const OrdersMetricsResponse = zod.object({
+  "totalOrders": zod.number(),
+  "totalRevenue": zod.number(),
+  "averageOrderValue": zod.number(),
+  "pending": zod.number(),
+  "inTransit": zod.number(),
+  "delivered": zod.number(),
+  "ordersByDay": zod.array(zod.object({
+    "date": zod.string(),
+    "count": zod.number(),
+    "revenue": zod.number()
+  })),
+  "ordersByMonth": zod.array(zod.object({
+    "month": zod.string(),
+    "count": zod.number(),
+    "revenue": zod.number()
+  }))
 })
 
 

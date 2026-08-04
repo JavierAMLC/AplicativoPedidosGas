@@ -18,30 +18,28 @@ router.get("/customers", async (req, res): Promise<void> => {
     return;
   }
 
-  const { q } = query.data;
+  const { q, page = 1, limit = 20 } = query.data;
+  const safeLimit = Math.min(limit, 100);
+  const offset = (page - 1) * safeLimit;
 
-  let customers;
-  if (q && q.trim().length > 0) {
-    const pattern = `%${q.trim()}%`;
-    customers = await db
-      .select()
-      .from(customersTable)
-      .where(
+  const baseQuery = db
+    .select()
+    .from(customersTable)
+    .orderBy(customersTable.name)
+    .limit(safeLimit)
+    .offset(offset);
+
+  const customers = q && q.trim().length > 0
+    ? await baseQuery.where(
         or(
-          like(customersTable.name, pattern),
-          like(customersTable.phone, pattern),
+          like(customersTable.name, `%${q.trim()}%`),
+          like(customersTable.phone, `%${q.trim()}%`),
         ),
       )
-      .orderBy(customersTable.name)
-      .limit(20);
-  } else {
-    customers = await db
-      .select()
-      .from(customersTable)
-      .orderBy(customersTable.name)
-      .limit(50);
-  }
+    : await baseQuery;
 
+  res.setHeader("X-Page", String(page));
+  res.setHeader("X-Limit", String(safeLimit));
   res.json(customers);
 });
 

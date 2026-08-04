@@ -11,10 +11,14 @@ import {
 
 const router: IRouter = Router();
 
-function formatOrder(
-  order: typeof ordersTable.$inferSelect,
-  customer: typeof customersTable.$inferSelect,
-) {
+type CustomerRow = typeof customersTable.$inferSelect;
+type OrderRow = typeof ordersTable.$inferSelect;
+type OrderWithCustomerRow = {
+  order: OrderRow;
+  customer: CustomerRow;
+};
+
+function formatOrder(order: OrderRow, customer: CustomerRow) {
   return {
     id: order.id,
     customer,
@@ -34,7 +38,7 @@ router.get("/orders/summary/today", async (req, res): Promise<void> => {
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
-  const rows = await db
+  const rows: OrderRow[] = await db
     .select()
     .from(ordersTable)
     .where(
@@ -49,10 +53,74 @@ router.get("/orders/summary/today", async (req, res): Promise<void> => {
     pending: rows.filter((r) => r.status === "pending").length,
     inTransit: rows.filter((r) => r.status === "in_transit").length,
     delivered: rows.filter((r) => r.status === "delivered").length,
-    totalRevenue: rows.reduce((sum, r) => sum + Number(r.totalAmount), 0),
+    totalRevenue: rows.reduce<number>((sum, r) => sum + Number(r.totalAmount), 0),
   };
 
   res.json(summary);
+});
+
+router.get("/orders/metrics", async (req, res): Promise<void> => {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+
+  const rows: OrderRow[] = await db
+    .select()
+    .from(ordersTable)
+    .where(
+      and(
+        gte(ordersTable.createdAt, startOfDay),
+        lt(ordersTable.createdAt, endOfDay),
+      ),
+    );
+
+  const totalOrders = rows.length;
+  const totalRevenue = rows.reduce((sum, r) => sum + Number(r.totalAmount), 0);
+  const averageOrderValue = totalOrders === 0 ? 0 : totalRevenue / totalOrders;
+  const pending = rows.filter((r) => r.status === "pending").length;
+  const inTransit = rows.filter((r) => r.status === "in_transit").length;
+  const delivered = rows.filter((r) => r.status === "delivered").length;
+
+  const byDay = rows.reduce((acc, row) => {
+    const date = row.createdAt.toISOString().slice(0, 10);
+    const entry = acc.get(date) ?? { count: 0, revenue: 0 };
+    entry.count += 1;
+    entry.revenue += Number(row.totalAmount);
+    acc.set(date, entry);
+    return acc;
+  }, new Map<string, { count: number; revenue: number }>());
+
+  const ordersByDay = Array.from(byDay.entries()).map(([date, value]) => ({
+    date,
+    count: value.count,
+    revenue: value.revenue,
+  }));
+
+  const byMonth = rows.reduce((acc, row) => {
+    const month = `${row.createdAt.getFullYear()}-${String(row.createdAt.getMonth() + 1).padStart(2, "0")}`;
+    const entry = acc.get(month) ?? { count: 0, revenue: 0 };
+    entry.count += 1;
+    entry.revenue += Number(row.totalAmount);
+    acc.set(month, entry);
+    return acc;
+  }, new Map<string, { count: number; revenue: number }>());
+
+  const ordersByMonth = Array.from(byMonth.entries()).map(([month, value]) => ({
+    month,
+    count: value.count,
+    revenue: value.revenue,
+  }));
+
+  res.json({
+    totalOrders,
+    totalRevenue,
+    averageOrderValue,
+    pending,
+    inTransit,
+    delivered,
+    ordersByDay,
+    ordersByMonth,
+  });
 });
 
 router.get("/orders", async (req, res): Promise<void> => {
@@ -62,7 +130,9 @@ router.get("/orders", async (req, res): Promise<void> => {
     return;
   }
 
-  const { date, status } = query.data;
+  const { date, status, page = 1, limit = 20 } = query.data;
+  const safeLimit = Math.min(limit, 100);
+  const offset = (page - 1) * safeLimit;
 
   const targetDate = date ? new Date(date) : new Date();
   const startOfDay = new Date(
@@ -81,7 +151,7 @@ router.get("/orders", async (req, res): Promise<void> => {
     conditions.push(eq(ordersTable.status, status));
   }
 
-  const rows = await db
+  const rows: OrderWithCustomerRow[] = await db
     .select({
       order: ordersTable,
       customer: customersTable,
@@ -89,8 +159,12 @@ router.get("/orders", async (req, res): Promise<void> => {
     .from(ordersTable)
     .innerJoin(customersTable, eq(ordersTable.customerId, customersTable.id))
     .where(and(...conditions))
-    .orderBy(ordersTable.createdAt);
+    .orderBy(ordersTable.createdAt)
+    .limit(safeLimit)
+    .offset(offset);
 
+  res.setHeader("X-Page", String(page));
+  res.setHeader("X-Limit", String(safeLimit));
   res.json(rows.map((r) => formatOrder(r.order, r.customer)));
 });
 
