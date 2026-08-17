@@ -11,5 +11,6 @@ export interface TodaySummary {
   pending: number;
   inTransit: number;
   delivered: number;
+  cancelled: number;
   totalRevenue: number;
 }

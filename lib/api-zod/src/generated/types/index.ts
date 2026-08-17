@@ -14,6 +14,7 @@ export * from './listCustomersParams';
 export * from './listOrdersParams';
 export * from './order';
 export * from './orderStatus';
+export * from './orderUpdate';
 export * from './paymentMethod';
 export * from './todaySummary';
 export * from './updateCustomerInput';

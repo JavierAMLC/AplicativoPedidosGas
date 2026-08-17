@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Flame, LayoutDashboard, PlusCircle } from "lucide-react";
+import { Flame, LayoutDashboard, PlusCircle, History as HistoryIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SettingsDialog } from "@/components/settings/SettingsDialog";
 
@@ -30,6 +30,18 @@ export function Navbar() {
             Tablero
           </Link>
           <SettingsDialog />
+          <Link
+            href="/historial"
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors hover:bg-muted/50",
+              location === "/historial"
+                ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <HistoryIcon className="w-4 h-4" />
+            Historial
+          </Link>
           <Link
             href="/nuevo"
             className={cn(

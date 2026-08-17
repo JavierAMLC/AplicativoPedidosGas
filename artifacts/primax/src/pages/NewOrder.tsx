@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLocation } from "wouter";
-import { useCreateOrder, useListCustomers, getListOrdersQueryKey, getGetTodaySummaryQueryKey } from "@workspace/api-client-react";
+import { useCreateOrder, useListCustomers, getListCustomersQueryKey, getListOrdersQueryKey, getGetTodaySummaryQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSettings } from "@/hooks/use-settings";
 
@@ -33,6 +33,7 @@ const formSchema = z.object({
   customerAddress: z.string().min(1, "Dirección es requerida"),
   customerReference: z.string().default(""),
   product: z.string().min(1, "Selecciona un producto"),
+  quantity: z.coerce.number().int().min(1, "Indica al menos 1 balón"),
   paymentMethod: z.enum(["cash", "yape_plin", "pos_card"], { required_error: "Selecciona método de pago" }),
   cashAmount: z.coerce.number().optional().nullable(),
   totalAmount: z.coerce.number().min(1, "Monto inválido"),
@@ -64,7 +65,7 @@ export default function NewOrder() {
 
   const { data: customers, isLoading: isSearching } = useListCustomers(
     { q: debouncedSearch },
-    { query: { enabled: debouncedSearch.length >= 2 } }
+    { query: { queryKey: getListCustomersQueryKey({ q: debouncedSearch }), enabled: debouncedSearch.length >= 2 } }
   );
 
   const form = useForm<FormValues>({
@@ -76,6 +77,7 @@ export default function NewOrder() {
       customerAddress: "",
       customerReference: "",
       product: "",
+      quantity: 1,
       paymentMethod: "cash",
       cashAmount: null,
       totalAmount: 0,
@@ -84,6 +86,14 @@ export default function NewOrder() {
   });
 
   const paymentMethod = form.watch("paymentMethod");
+  const quantity = form.watch("quantity");
+  const selectedProduct = products.find((product) => product.name === form.watch("product"));
+
+  useEffect(() => {
+    if (selectedProduct?.price && quantity > 0) {
+      form.setValue("totalAmount", selectedProduct.price * quantity);
+    }
+  }, [selectedProduct?.id, selectedProduct?.price, quantity, form]);
 
   // Handle clicking outside to close dropdown
   useEffect(() => {
@@ -301,9 +311,6 @@ export default function NewOrder() {
                               )}
                               onClick={() => {
                                 field.onChange(prod.name);
-                                if (prod.price > 0) {
-                                  form.setValue("totalAmount", prod.price);
-                                }
                               }}
                             >
                               <span className="flex items-center gap-1">
@@ -324,6 +331,26 @@ export default function NewOrder() {
                   />
 
                   <div className="flex gap-4 items-start">
+                    <FormField
+                      control={form.control}
+                      name="quantity"
+                      render={({ field }) => (
+                        <FormItem className="w-28">
+                          <FormLabel>Balones</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              step="1"
+                              {...field}
+                              className="font-mono text-lg font-bold h-11"
+                              onChange={(event) => field.onChange(event.target.valueAsNumber || 1)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <FormField
                       control={form.control}
                       name="totalAmount"

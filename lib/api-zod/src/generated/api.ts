@@ -105,8 +105,11 @@ export const UpdateCustomerResponse = zod.object({
  */
 export const ListOrdersQueryParams = zod.object({
   "date": zod.coerce.string().optional().describe('Filter by date (YYYY-MM-DD), defaults to today'),
-  "status": zod.enum(['pending', 'in_transit', 'delivered']).optional().describe('Filter by status')
+  "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled']).optional().describe('Filter by status')
 })
+
+
+
 
 export const ListOrdersResponseItem = zod.object({
   "id": zod.number(),
@@ -120,10 +123,11 @@ export const ListOrdersResponseItem = zod.object({
   "updatedAt": zod.coerce.date()
 }),
   "product": zod.string(),
+  "quantity": zod.number().min(1),
   "paymentMethod": zod.enum(['cash', 'yape_plin', 'pos_card']),
   "cashAmount": zod.number().nullish(),
   "totalAmount": zod.number(),
-  "status": zod.enum(['pending', 'in_transit', 'delivered']),
+  "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled']),
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -134,6 +138,9 @@ export const ListOrdersResponse = zod.array(ListOrdersResponseItem)
 /**
  * @summary Create a new order
  */
+
+
+
 export const CreateOrderBody = zod.object({
   "customerId": zod.number().nullish(),
   "customerName": zod.string(),
@@ -141,11 +148,15 @@ export const CreateOrderBody = zod.object({
   "customerAddress": zod.string(),
   "customerReference": zod.string(),
   "product": zod.string(),
+  "quantity": zod.number().min(1),
   "paymentMethod": zod.enum(['cash', 'yape_plin', 'pos_card']),
   "cashAmount": zod.number().nullish(),
   "totalAmount": zod.number(),
   "notes": zod.string().nullish()
 })
+
+
+
 
 export const CreateOrderResponse = zod.object({
   "id": zod.number(),
@@ -159,10 +170,11 @@ export const CreateOrderResponse = zod.object({
   "updatedAt": zod.coerce.date()
 }),
   "product": zod.string(),
+  "quantity": zod.number().min(1),
   "paymentMethod": zod.enum(['cash', 'yape_plin', 'pos_card']),
   "cashAmount": zod.number().nullish(),
   "totalAmount": zod.number(),
-  "status": zod.enum(['pending', 'in_transit', 'delivered']),
+  "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled']),
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -176,6 +188,9 @@ export const GetOrderParams = zod.object({
   "id": zod.coerce.number()
 })
 
+
+
+
 export const GetOrderResponse = zod.object({
   "id": zod.number(),
   "customer": zod.object({
@@ -188,10 +203,11 @@ export const GetOrderResponse = zod.object({
   "updatedAt": zod.coerce.date()
 }),
   "product": zod.string(),
+  "quantity": zod.number().min(1),
   "paymentMethod": zod.enum(['cash', 'yape_plin', 'pos_card']),
   "cashAmount": zod.number().nullish(),
   "totalAmount": zod.number(),
-  "status": zod.enum(['pending', 'in_transit', 'delivered']),
+  "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled']),
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -206,8 +222,11 @@ export const UpdateOrderStatusParams = zod.object({
 })
 
 export const UpdateOrderStatusBody = zod.object({
-  "status": zod.enum(['pending', 'in_transit', 'delivered'])
+  "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled'])
 })
+
+
+
 
 export const UpdateOrderStatusResponse = zod.object({
   "id": zod.number(),
@@ -221,10 +240,61 @@ export const UpdateOrderStatusResponse = zod.object({
   "updatedAt": zod.coerce.date()
 }),
   "product": zod.string(),
+  "quantity": zod.number().min(1),
   "paymentMethod": zod.enum(['cash', 'yape_plin', 'pos_card']),
   "cashAmount": zod.number().nullish(),
   "totalAmount": zod.number(),
-  "status": zod.enum(['pending', 'in_transit', 'delivered']),
+  "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Edit an order and its customer details
+ */
+export const UpdateOrderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateOrderBody = zod.object({
+  "customerName": zod.string(),
+  "customerPhone": zod.string(),
+  "customerAddress": zod.string(),
+  "customerReference": zod.string(),
+  "product": zod.string(),
+  "quantity": zod.number().min(1),
+  "paymentMethod": zod.enum(['cash', 'yape_plin', 'pos_card']),
+  "cashAmount": zod.number().nullish(),
+  "totalAmount": zod.number(),
+  "notes": zod.string().nullish(),
+  "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled']).optional()
+})
+
+
+
+
+export const UpdateOrderResponse = zod.object({
+  "id": zod.number(),
+  "customer": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string(),
+  "reference": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "product": zod.string(),
+  "quantity": zod.number().min(1),
+  "paymentMethod": zod.enum(['cash', 'yape_plin', 'pos_card']),
+  "cashAmount": zod.number().nullish(),
+  "totalAmount": zod.number(),
+  "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled']),
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -239,6 +309,7 @@ export const GetTodaySummaryResponse = zod.object({
   "pending": zod.number(),
   "inTransit": zod.number(),
   "delivered": zod.number(),
+  "cancelled": zod.number(),
   "totalRevenue": zod.number()
 })
 

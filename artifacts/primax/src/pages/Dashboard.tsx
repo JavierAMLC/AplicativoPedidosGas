@@ -1,4 +1,4 @@
-import { useListOrders } from "@workspace/api-client-react";
+import { useListOrders, getListOrdersQueryKey } from "@workspace/api-client-react";
 import { SummaryHeader } from "@/components/dashboard/SummaryHeader";
 import { OrderCard } from "@/components/order/OrderCard";
 import { AlertCircle, RotateCw } from "lucide-react";
@@ -11,6 +11,7 @@ export default function Dashboard() {
     {},
     {
       query: {
+        queryKey: getListOrdersQueryKey({}),
         refetchInterval: 15000,
         refetchOnMount: "always",
       }
@@ -71,7 +72,7 @@ export default function Dashboard() {
                 {pending.length}
               </span>
             </div>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 max-h-[calc(100dvh-315px)] overflow-y-auto overscroll-contain pr-2">
               {pending.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-sm border border-dashed rounded-lg">
                   No hay pedidos pendientes
@@ -93,7 +94,7 @@ export default function Dashboard() {
                 {inTransit.length}
               </span>
             </div>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 max-h-[calc(100dvh-315px)] overflow-y-auto overscroll-contain pr-2">
               {inTransit.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-sm border border-dashed rounded-lg">
                   No hay pedidos en camino
@@ -115,7 +116,7 @@ export default function Dashboard() {
                 {delivered.length}
               </span>
             </div>
-            <div className="flex flex-col gap-3 opacity-70 hover:opacity-100 transition-opacity">
+            <div className="flex flex-col gap-3 max-h-[calc(100dvh-315px)] overflow-y-auto overscroll-contain pr-2 opacity-70 hover:opacity-100 transition-opacity">
               {delivered.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-sm border border-dashed rounded-lg">
                   No hay pedidos entregados

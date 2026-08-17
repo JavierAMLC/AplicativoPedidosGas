@@ -9,6 +9,7 @@ export const ordersTable = mysqlTable("orders", {
     .notNull()
     .references(() => customersTable.id),
   product: varchar("product", { length: 100 }).notNull(),
+  quantity: int("quantity").notNull().default(1),
   paymentMethod: varchar("payment_method", { length: 50 }).notNull(),
   cashAmount: decimal("cash_amount", { precision: 10, scale: 2 }),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),

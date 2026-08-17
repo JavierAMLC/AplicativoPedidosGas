@@ -8,11 +8,13 @@ import { MapPin, Phone, MessageCircle, ArrowRight, User, Package, CreditCard, Ba
 import { useUpdateOrderStatus, getListOrdersQueryKey, getGetTodaySummaryQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSettings } from "@/hooks/use-settings";
+import { OrderEditDialog } from "@/components/order/OrderEditDialog";
 
 const statusLabels: Record<OrderStatus, string> = {
   pending: "Pendiente",
   in_transit: "En camino",
   delivered: "Entregado",
+  cancelled: "Cancelado",
 };
 
 const paymentLabels: Record<string, string> = {
@@ -44,12 +46,26 @@ export function OrderCard({ order }: { order: Order }) {
     }
   };
 
+  const handleCancel = () => {
+    if (!window.confirm(`¿Cancelar el pedido de ${order.customer.name}?`)) return;
+    updateStatus.mutate(
+      { id: order.id, data: { status: "cancelled" } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetTodaySummaryQueryKey() });
+        },
+      },
+    );
+  };
+
   const generateWhatsAppLink = () => {
     const text = `📦 NUEVO PEDIDO DE GAS
+${settings.whatsappSenderNumber ? `📱 Remitente: +${settings.whatsappSenderNumber}\n` : ""}👤 Cliente: ${order.customer.name} / ${order.customer.phone}
 👤 Cliente: ${order.customer.name} / ${order.customer.phone}
 📍 Dirección: ${order.customer.address}
 📌 Referencia: ${order.customer.reference}
-🔥 Producto: ${order.product}
+🔥 Producto: ${order.product} · ${order.quantity} ${order.quantity === 1 ? "balón" : "balones"}
 💳 Pago: ${paymentLabels[order.paymentMethod] || order.paymentMethod}${order.paymentMethod === 'cash' && order.cashAmount ? ` (Paga con S/ ${order.cashAmount})` : ''}
 💵 Total: S/ ${order.totalAmount.toFixed(2)}`;
 
@@ -73,9 +89,10 @@ export function OrderCard({ order }: { order: Order }) {
             {order.customer.name}
           </h3>
         </div>
-        <Badge variant={
-          order.status === 'pending' ? "destructive" :
-          order.status === 'in_transit' ? "default" : "secondary"
+         <Badge variant={
+           order.status === 'pending' ? "destructive" :
+           order.status === 'in_transit' ? "default" :
+           order.status === 'cancelled' ? "outline" : "secondary"
         } className="text-[10px] uppercase tracking-wider py-0.5">
           {statusLabels[order.status]}
         </Badge>
@@ -102,7 +119,7 @@ export function OrderCard({ order }: { order: Order }) {
           <div className="flex justify-between items-center">
             <span className="flex items-center gap-1.5 text-xs font-medium">
               <Package className="w-3.5 h-3.5 text-muted-foreground" />
-              {order.product}
+              {order.product} · {order.quantity} {order.quantity === 1 ? "balón" : "balones"}
             </span>
             <span className="font-mono font-bold text-primary">
               S/ {order.totalAmount.toFixed(2)}
@@ -128,7 +145,8 @@ export function OrderCard({ order }: { order: Order }) {
         )}
       </CardContent>
       
-      <CardFooter className="p-2 border-t border-border/40 flex gap-2">
+      <CardFooter className="p-2 border-t border-border/40 flex flex-wrap gap-1.5">
+        {order.status !== "cancelled" && <OrderEditDialog order={order} />}
         <Button 
           variant="outline" 
           size="sm" 
@@ -138,7 +156,7 @@ export function OrderCard({ order }: { order: Order }) {
           <MessageCircle className="w-3.5 h-3.5" />
           Enviar
         </Button>
-        {order.status !== "delivered" && (
+        {order.status !== "delivered" && order.status !== "cancelled" && (
           <Button 
             variant="default" 
             size="sm" 
@@ -148,6 +166,17 @@ export function OrderCard({ order }: { order: Order }) {
           >
             {order.status === 'pending' ? 'En Camino' : 'Entregado'}
             <ArrowRight className="w-3.5 h-3.5" />
+          </Button>
+        )}
+        {order.status !== "delivered" && order.status !== "cancelled" && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+            onClick={handleCancel}
+            disabled={isPending}
+          >
+            Cancelar
           </Button>
         )}
       </CardFooter>

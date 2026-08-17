@@ -5,21 +5,22 @@
  * API specification for Primax Gas Distributor Order Management
  * OpenAPI spec version: 0.1.0
  */
-import type { Customer } from './customer';
 import type { OrderStatus } from './orderStatus';
 import type { PaymentMethod } from './paymentMethod';
 
-export interface Order {
-  id: number;
-  customer: Customer;
+export interface OrderUpdate {
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  customerReference: string;
   product: string;
   /** @minimum 1 */
   quantity: number;
   paymentMethod: PaymentMethod;
+  /** @nullable */
   cashAmount?: number | null;
   totalAmount: number;
-  status: OrderStatus;
+  /** @nullable */
   notes?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  status?: OrderStatus;
 }

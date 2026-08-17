@@ -1,18 +1,19 @@
-import { useGetTodaySummary } from "@workspace/api-client-react";
+import { useGetTodaySummary, getGetTodaySummaryQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Activity, CheckCircle2, Clock, Truck, TrendingUp } from "lucide-react";
+import { Activity, CheckCircle2, Clock, Truck, TrendingUp, Ban } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function SummaryHeader() {
   const { data: summary, isLoading } = useGetTodaySummary({
     query: {
+      queryKey: getGetTodaySummaryQueryKey(),
       refetchInterval: 30000 // refresh every 30s
     }
   });
 
   if (isLoading || !summary) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
         {Array.from({ length: 5 }).map((_, i) => (
           <Card key={i} className="border-border/50">
             <CardContent className="p-4 flex items-center justify-between">
@@ -29,7 +30,7 @@ export function SummaryHeader() {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+    <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
       <Card className="border-border/50 shadow-sm bg-gradient-to-br from-card to-muted/20">
         <CardContent className="p-4 flex items-center justify-between">
           <div>
@@ -74,6 +75,18 @@ export function SummaryHeader() {
           </div>
           <div className="p-2 bg-emerald-500/10 rounded-full text-emerald-600 dark:text-emerald-500">
             <CheckCircle2 className="w-5 h-5" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/50 shadow-sm bg-gradient-to-br from-card to-muted/30">
+        <CardContent className="p-4 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wider">Cancelados</p>
+            <h2 className="text-2xl font-bold font-mono text-muted-foreground">{summary.cancelled}</h2>
+          </div>
+          <div className="p-2 bg-muted rounded-full text-muted-foreground">
+            <Ban className="w-5 h-5" />
           </div>
         </CardContent>
       </Card>

@@ -32,6 +32,7 @@ export function SettingsDialog() {
 
   // WhatsApp number
   const [waNumber, setWaNumber] = useState(settings.whatsappNumber);
+  const [senderNumber, setSenderNumber] = useState(settings.whatsappSenderNumber);
 
   const startEdit = (id: string, name: string, price: number) => {
     setEditingId(id);
@@ -80,7 +81,11 @@ export function SettingsDialog() {
   };
 
   const saveWhatsApp = () => {
-    updateSettings((prev) => ({ ...prev, whatsappNumber: waNumber.trim() }));
+    updateSettings((prev) => ({
+      ...prev,
+      whatsappNumber: waNumber.trim(),
+      whatsappSenderNumber: senderNumber.trim(),
+    }));
   };
 
   return (
@@ -103,12 +108,13 @@ export function SettingsDialog() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-[#25D366]" />
-              <h3 className="font-semibold text-sm">Número de WhatsApp destino</h3>
+            <h3 className="font-semibold text-sm">Números de WhatsApp</h3>
             </div>
             <p className="text-xs text-muted-foreground">
-              Número que recibirá los pedidos. Incluye el código de país sin "+" (ej: <span className="font-mono">51987654321</span>). Déjalo vacío para abrir WhatsApp sin número fijo.
+              Ambos números llevan código de país sin "+" (ej: <span className="font-mono">51987654321</span>).
             </p>
-            <div className="flex gap-2">
+            <div className="space-y-2">
+              <Label className="text-xs">Número que recibe el pedido</Label>
               <Input
                 value={waNumber}
                 onChange={(e) => setWaNumber(e.target.value.replace(/\D/g, ""))}
@@ -116,13 +122,24 @@ export function SettingsDialog() {
                 className="font-mono h-9"
                 maxLength={15}
               />
-              <Button size="sm" onClick={saveWhatsApp} className="shrink-0 h-9 bg-[#25D366] hover:bg-[#1ebe5d] text-white">
-                Guardar
+              <Label className="text-xs">Número del negocio que envía (referencia)</Label>
+              <Input
+                value={senderNumber}
+                onChange={(e) => setSenderNumber(e.target.value.replace(/\D/g, ""))}
+                placeholder="51987654321"
+                className="font-mono h-9"
+                maxLength={15}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                WhatsApp decide la cuenta real que envía según la sesión abierta. Este número se agrega al mensaje como referencia; para enviar realmente desde otra cuenta hay que abrir WhatsApp con esa cuenta.
+              </p>
+              <Button size="sm" onClick={saveWhatsApp} className="w-full h-9 bg-[#25D366] hover:bg-[#1ebe5d] text-white">
+                Guardar números
               </Button>
             </div>
             {settings.whatsappNumber && (
               <p className="text-xs text-[#128C7E] font-medium">
-                ✓ Enviando a: +{settings.whatsappNumber}
+                ✓ Recibe: +{settings.whatsappNumber}{settings.whatsappSenderNumber ? ` · Referencia: +${settings.whatsappSenderNumber}` : ""}
               </p>
             )}
           </div>

@@ -16,6 +16,7 @@ export const OrderStatus = {
   pending: 'pending',
   in_transit: 'in_transit',
   delivered: 'delivered',
+  cancelled: 'cancelled',
 } as const;
 
 export type PaymentMethod = typeof PaymentMethod[keyof typeof PaymentMethod];
@@ -55,6 +56,8 @@ export interface Order {
   id: number;
   customer: Customer;
   product: string;
+  /** @minimum 1 */
+  quantity: number;
   paymentMethod: PaymentMethod;
   cashAmount?: number | null;
   totalAmount: number;
@@ -71,6 +74,8 @@ export interface CreateOrderInput {
   customerAddress: string;
   customerReference: string;
   product: string;
+  /** @minimum 1 */
+  quantity: number;
   paymentMethod: PaymentMethod;
   cashAmount?: number | null;
   totalAmount: number;
@@ -81,11 +86,29 @@ export interface UpdateOrderStatusInput {
   status: OrderStatus;
 }
 
+export interface OrderUpdate {
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  customerReference: string;
+  product: string;
+  /** @minimum 1 */
+  quantity: number;
+  paymentMethod: PaymentMethod;
+  /** @nullable */
+  cashAmount?: number | null;
+  totalAmount: number;
+  /** @nullable */
+  notes?: string | null;
+  status?: OrderStatus;
+}
+
 export interface TodaySummary {
   totalOrders: number;
   pending: number;
   inTransit: number;
   delivered: number;
+  cancelled: number;
   totalRevenue: number;
 }
 

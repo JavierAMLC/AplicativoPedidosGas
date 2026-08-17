@@ -13,4 +13,5 @@ export const OrderStatus = {
   pending: 'pending',
   in_transit: 'in_transit',
   delivered: 'delivered',
+  cancelled: 'cancelled',
 } as const;

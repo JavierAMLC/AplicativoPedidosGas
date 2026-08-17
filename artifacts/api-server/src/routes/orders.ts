@@ -7,9 +7,31 @@ import {
   GetOrderParams,
   UpdateOrderStatusParams,
   UpdateOrderStatusBody,
+  UpdateOrderBody,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+const DAY_MS = 24 * 60 * 60 * 1000;
+const PERU_UTC_OFFSET_HOURS = 5;
+
+function getPeruDateString(now = new Date()) {
+  const peruNow = new Date(now.getTime() - PERU_UTC_OFFSET_HOURS * 60 * 60 * 1000);
+  return [
+    peruNow.getUTCFullYear(),
+    String(peruNow.getUTCMonth() + 1).padStart(2, "0"),
+    String(peruNow.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function getPeruDayBounds(dateString = getPeruDateString()): [Date, Date] {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
+  if (!match) {
+    throw new Error("Invalid date. Expected YYYY-MM-DD.");
+  }
+  const [, year, month, day] = match;
+  const start = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), PERU_UTC_OFFSET_HOURS));
+  return [start, new Date(start.getTime() + DAY_MS)];
+}
 
 function formatOrder(
   order: typeof ordersTable.$inferSelect,
@@ -19,6 +41,7 @@ function formatOrder(
     id: order.id,
     customer,
     product: order.product,
+    quantity: Number(order.quantity),
     paymentMethod: order.paymentMethod,
     cashAmount: order.cashAmount != null ? Number(order.cashAmount) : null,
     totalAmount: Number(order.totalAmount),
@@ -29,30 +52,35 @@ function formatOrder(
   };
 }
 
-router.get("/orders/summary/today", async (req, res): Promise<void> => {
-  const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+async function findOrder(id: number) {
+  const [row] = await db
+    .select({
+      order: ordersTable,
+      customer: customersTable,
+    })
+    .from(ordersTable)
+    .innerJoin(customersTable, eq(ordersTable.customerId, customersTable.id))
+    .where(eq(ordersTable.id, id));
+  return row;
+}
 
+router.get("/orders/summary/today", async (_req, res): Promise<void> => {
+  const [startOfDay, endOfDay] = getPeruDayBounds();
   const rows = await db
     .select()
     .from(ordersTable)
-    .where(
-      and(
-        gte(ordersTable.createdAt, startOfDay),
-        lt(ordersTable.createdAt, endOfDay),
-      ),
-    );
+    .where(and(gte(ordersTable.createdAt, startOfDay), lt(ordersTable.createdAt, endOfDay)));
 
-  const summary = {
+  res.json({
     totalOrders: rows.length,
     pending: rows.filter((r) => r.status === "pending").length,
     inTransit: rows.filter((r) => r.status === "in_transit").length,
     delivered: rows.filter((r) => r.status === "delivered").length,
-    totalRevenue: rows.reduce((sum, r) => sum + Number(r.totalAmount), 0),
-  };
-
-  res.json(summary);
+    cancelled: rows.filter((r) => r.status === "cancelled").length,
+    totalRevenue: rows
+      .filter((r) => r.status !== "cancelled")
+      .reduce((sum, r) => sum + Number(r.totalAmount), 0),
+  });
 });
 
 router.get("/orders", async (req, res): Promise<void> => {
@@ -63,20 +91,18 @@ router.get("/orders", async (req, res): Promise<void> => {
   }
 
   const { date, status } = query.data;
-
-  const targetDate = date ? new Date(date) : new Date();
-  const startOfDay = new Date(
-    targetDate.getFullYear(),
-    targetDate.getMonth(),
-    targetDate.getDate(),
-  );
-  const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+  let bounds: [Date, Date];
+  try {
+    bounds = getPeruDayBounds(date);
+  } catch {
+    res.status(400).json({ error: "La fecha debe tener formato YYYY-MM-DD." });
+    return;
+  }
 
   const conditions = [
-    gte(ordersTable.createdAt, startOfDay),
-    lt(ordersTable.createdAt, endOfDay),
+    gte(ordersTable.createdAt, bounds[0]),
+    lt(ordersTable.createdAt, bounds[1]),
   ];
-
   if (status) {
     conditions.push(eq(ordersTable.status, status));
   }
@@ -106,7 +132,6 @@ router.post("/orders", async (req, res): Promise<void> => {
 
   if (body.customerId != null) {
     customerId = body.customerId;
-    // Update customer info to latest
     await db
       .update(customersTable)
       .set({
@@ -116,7 +141,6 @@ router.post("/orders", async (req, res): Promise<void> => {
       })
       .where(eq(customersTable.id, customerId));
   } else {
-    // Try to find existing customer by phone
     const [existing] = await db
       .select()
       .from(customersTable)
@@ -152,6 +176,7 @@ router.post("/orders", async (req, res): Promise<void> => {
     .values({
       customerId,
       product: body.product,
+      quantity: body.quantity,
       paymentMethod: body.paymentMethod,
       cashAmount: body.cashAmount != null ? String(body.cashAmount) : null,
       totalAmount: String(body.totalAmount),
@@ -160,17 +185,12 @@ router.post("/orders", async (req, res): Promise<void> => {
     })
     .$returningId();
 
-  const [order] = await db
-    .select()
-    .from(ordersTable)
-    .where(eq(ordersTable.id, orderResult.id));
-
-  const [customer] = await db
-    .select()
-    .from(customersTable)
-    .where(eq(customersTable.id, customerId));
-
-  res.status(201).json(formatOrder(order, customer));
+  const row = await findOrder(orderResult.id);
+  if (!row) {
+    res.status(500).json({ error: "No se pudo recuperar el pedido creado." });
+    return;
+  }
+  res.status(201).json(formatOrder(row.order, row.customer));
 });
 
 router.get("/orders/:id", async (req, res): Promise<void> => {
@@ -180,20 +200,11 @@ router.get("/orders/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db
-    .select({
-      order: ordersTable,
-      customer: customersTable,
-    })
-    .from(ordersTable)
-    .innerJoin(customersTable, eq(ordersTable.customerId, customersTable.id))
-    .where(eq(ordersTable.id, params.data.id));
-
+  const row = await findOrder(params.data.id);
   if (!row) {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-
   res.json(formatOrder(row.order, row.customer));
 });
 
@@ -210,25 +221,73 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  const existing = await findOrder(params.data.id);
+  if (!existing) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+
   await db
     .update(ordersTable)
     .set({ status: parsed.data.status })
     .where(eq(ordersTable.id, params.data.id));
 
-  const [row] = await db
-    .select({
-      order: ordersTable,
-      customer: customersTable,
-    })
-    .from(ordersTable)
-    .innerJoin(customersTable, eq(ordersTable.customerId, customersTable.id))
-    .where(eq(ordersTable.id, params.data.id));
-
+  const row = await findOrder(params.data.id);
   if (!row) {
     res.status(404).json({ error: "Order not found" });
     return;
   }
+  res.json(formatOrder(row.order, row.customer));
+});
 
+router.put("/orders/:id", async (req, res): Promise<void> => {
+  const params = GetOrderParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const parsed = UpdateOrderBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const existing = await findOrder(params.data.id);
+  if (!existing) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+
+  const body = parsed.data;
+  await db
+    .update(customersTable)
+    .set({
+      name: body.customerName,
+      phone: body.customerPhone,
+      address: body.customerAddress,
+      reference: body.customerReference,
+    })
+    .where(eq(customersTable.id, existing.customer.id));
+
+  await db
+    .update(ordersTable)
+    .set({
+      product: body.product,
+      quantity: body.quantity,
+      paymentMethod: body.paymentMethod,
+      cashAmount: body.cashAmount != null ? String(body.cashAmount) : null,
+      totalAmount: String(body.totalAmount),
+      notes: body.notes ?? null,
+      status: body.status ?? existing.order.status,
+    })
+    .where(eq(ordersTable.id, params.data.id));
+
+  const row = await findOrder(params.data.id);
+  if (!row) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
   res.json(formatOrder(row.order, row.customer));
 });
 

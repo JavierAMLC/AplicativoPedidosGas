@@ -14,6 +14,8 @@ export interface CreateOrderInput {
   customerAddress: string;
   customerReference: string;
   product: string;
+  /** @minimum 1 */
+  quantity: number;
   paymentMethod: PaymentMethod;
   cashAmount?: number | null;
   totalAmount: number;

@@ -1,0 +1,2 @@
+- [Calendario de pedidos](order-calendar.md) — los reportes usan el día calendario de Perú, aunque MySQL almacene timestamps en UTC.
+- [WhatsApp web](whatsapp-web.md) — el enlace puede elegir destinatario, pero la cuenta remitente real depende de la sesión abierta en WhatsApp.

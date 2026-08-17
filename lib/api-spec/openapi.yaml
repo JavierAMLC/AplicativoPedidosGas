@@ -198,6 +198,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Order"
+    put:
+      operationId: updateOrder
+      tags: [orders]
+      summary: Edit an order and its customer details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderUpdate"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
 
   /orders/summary/today:
     get:
@@ -224,7 +247,7 @@ components:
 
     OrderStatus:
       type: string
-      enum: [pending, in_transit, delivered]
+      enum: [pending, in_transit, delivered, cancelled]
 
     PaymentMethod:
       type: string
@@ -296,6 +319,9 @@ components:
           $ref: "#/components/schemas/Customer"
         product:
           type: string
+        quantity:
+          type: integer
+          minimum: 1
         paymentMethod:
           $ref: "#/components/schemas/PaymentMethod"
         cashAmount:
@@ -318,6 +344,7 @@ components:
         - id
         - customer
         - product
+        - quantity
         - paymentMethod
         - totalAmount
         - status
@@ -340,6 +367,9 @@ components:
           type: string
         product:
           type: string
+        quantity:
+          type: integer
+          minimum: 1
         paymentMethod:
           $ref: "#/components/schemas/PaymentMethod"
         cashAmount:
@@ -356,6 +386,7 @@ components:
         - customerAddress
         - customerReference
         - product
+        - quantity
         - paymentMethod
         - totalAmount
 
@@ -366,6 +397,42 @@ components:
           $ref: "#/components/schemas/OrderStatus"
       required:
         - status
+
+    OrderUpdate:
+      type: object
+      properties:
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        customerAddress:
+          type: string
+        customerReference:
+          type: string
+        product:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        paymentMethod:
+          $ref: "#/components/schemas/PaymentMethod"
+        cashAmount:
+          type: ["number", "null"]
+        totalAmount:
+          type: number
+        notes:
+          type: ["string", "null"]
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+      required:
+        - customerName
+        - customerPhone
+        - customerAddress
+        - customerReference
+        - product
+        - quantity
+        - paymentMethod
+        - totalAmount
 
     TodaySummary:
       type: object
@@ -378,6 +445,8 @@ components:
           type: integer
         delivered:
           type: integer
+        cancelled:
+          type: integer
         totalRevenue:
           type: number
       required:
@@ -385,4 +454,5 @@ components:
         - pending
         - inTransit
         - delivered
+        - cancelled
         - totalRevenue

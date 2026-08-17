@@ -10,7 +10,8 @@ export interface Product {
 
 export interface Settings {
   products: Product[];
-  whatsappNumber: string; // e.g. "51987654321" with country code, or "" for no fixed number
+  whatsappNumber: string;
+  whatsappSenderNumber: string;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -21,6 +22,7 @@ const DEFAULT_SETTINGS: Settings = {
     { id: "4", name: "Gasolina", price: 0 },
   ],
   whatsappNumber: "",
+  whatsappSenderNumber: "",
 };
 
 function loadSettings(): Settings {
@@ -31,6 +33,7 @@ function loadSettings(): Settings {
     return {
       products: parsed.products ?? DEFAULT_SETTINGS.products,
       whatsappNumber: parsed.whatsappNumber ?? DEFAULT_SETTINGS.whatsappNumber,
+      whatsappSenderNumber: parsed.whatsappSenderNumber ?? DEFAULT_SETTINGS.whatsappSenderNumber,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };

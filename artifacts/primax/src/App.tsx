@@ -6,6 +6,7 @@ import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { Navbar } from '@/components/layout/Navbar';
 import Dashboard from '@/pages/Dashboard';
 import NewOrder from '@/pages/NewOrder';
+import History from '@/pages/History';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,6 +25,7 @@ function Router() {
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/nuevo" component={NewOrder} />
+          <Route path="/historial" component={History} />
           <Route component={NotFound} />
         </Switch>
       </main>
