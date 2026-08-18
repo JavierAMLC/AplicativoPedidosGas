@@ -7,8 +7,14 @@
  */
 
 export * from './createCustomerInput';
+export * from './createDriverInput';
 export * from './createOrderInput';
 export * from './customer';
+export * from './driver';
+export * from './driverLocationUpdate';
+export * from './driverStatus';
+export * from './driverUpdate';
+export * from './getDriverSettlementParams';
 export * from './healthStatus';
 export * from './listCustomersParams';
 export * from './listOrdersParams';
@@ -16,6 +22,7 @@ export * from './order';
 export * from './orderStatus';
 export * from './orderUpdate';
 export * from './paymentMethod';
+export * from './settlement';
 export * from './todaySummary';
 export * from './updateCustomerInput';
 export * from './updateOrderStatusInput';

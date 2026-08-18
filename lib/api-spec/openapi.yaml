@@ -235,6 +235,111 @@ paths:
               schema:
                 $ref: "#/components/schemas/TodaySummary"
 
+  /drivers:
+    get:
+      operationId: listDrivers
+      tags: [drivers]
+      summary: List delivery drivers
+      responses:
+        "200":
+          description: Delivery drivers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Driver"
+    post:
+      operationId: createDriver
+      tags: [drivers]
+      summary: Create a delivery driver
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDriverInput"
+      responses:
+        "201":
+          description: Created driver
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Driver"
+
+  /drivers/{id}:
+    patch:
+      operationId: updateDriver
+      tags: [drivers]
+      summary: Update a delivery driver
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DriverUpdate"
+      responses:
+        "200":
+          description: Updated driver
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Driver"
+
+  /drivers/{id}/location:
+    patch:
+      operationId: updateDriverLocation
+      tags: [drivers]
+      summary: Update the driver's current location
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DriverLocationUpdate"
+      responses:
+        "200":
+          description: Updated driver
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Driver"
+
+  /settlements:
+    get:
+      operationId: getDriverSettlement
+      tags: [drivers]
+      summary: Get driver payment settlement
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: driverId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Driver settlement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settlement"
+
 components:
   schemas:
     HealthStatus:
@@ -331,6 +436,13 @@ components:
           type: number
         status:
           $ref: "#/components/schemas/OrderStatus"
+        driverId:
+          type: integer
+          nullable: true
+        driver:
+          allOf:
+            - $ref: "#/components/schemas/Driver"
+          nullable: true
         notes:
           type: string
           nullable: true
@@ -365,6 +477,9 @@ components:
           type: string
         customerReference:
           type: string
+        driverId:
+          type: integer
+          nullable: true
         product:
           type: string
         quantity:
@@ -422,6 +537,9 @@ components:
           type: number
         notes:
           type: ["string", "null"]
+        driverId:
+          type: integer
+          nullable: true
         status:
           $ref: "#/components/schemas/OrderStatus"
       required:
@@ -433,6 +551,109 @@ components:
         - quantity
         - paymentMethod
         - totalAmount
+
+    DriverStatus:
+      type: string
+      enum: [available, busy, offline]
+
+    Driver:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        status:
+          $ref: "#/components/schemas/DriverStatus"
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        locationUpdatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - phone
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateDriverInput:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        status:
+          $ref: "#/components/schemas/DriverStatus"
+      required:
+        - name
+        - phone
+
+    DriverUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        status:
+          $ref: "#/components/schemas/DriverStatus"
+
+    DriverLocationUpdate:
+      type: object
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+      required:
+        - latitude
+        - longitude
+
+    Settlement:
+      type: object
+      properties:
+        date:
+          type: string
+        driverId:
+          type: integer
+          nullable: true
+        driverName:
+          type: string
+        cash:
+          type: number
+        yapePlin:
+          type: number
+        posCard:
+          type: number
+        grandTotal:
+          type: number
+        orders:
+          type: integer
+      required:
+        - date
+        - driverId
+        - driverName
+        - cash
+        - yapePlin
+        - posCard
+        - grandTotal
+        - orders
 
     TodaySummary:
       type: object

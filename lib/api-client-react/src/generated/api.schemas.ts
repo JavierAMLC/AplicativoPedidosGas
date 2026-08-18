@@ -52,6 +52,27 @@ export interface UpdateCustomerInput {
   reference?: string;
 }
 
+export type DriverStatus = typeof DriverStatus[keyof typeof DriverStatus];
+
+
+export const DriverStatus = {
+  available: 'available',
+  busy: 'busy',
+  offline: 'offline',
+} as const;
+
+export interface Driver {
+  id: number;
+  name: string;
+  phone: string;
+  status: DriverStatus;
+  latitude?: number | null;
+  longitude?: number | null;
+  locationUpdatedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Order {
   id: number;
   customer: Customer;
@@ -62,6 +83,8 @@ export interface Order {
   cashAmount?: number | null;
   totalAmount: number;
   status: OrderStatus;
+  driverId?: number | null;
+  driver?: Driver | null;
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -73,6 +96,7 @@ export interface CreateOrderInput {
   customerPhone: string;
   customerAddress: string;
   customerReference: string;
+  driverId?: number | null;
   product: string;
   /** @minimum 1 */
   quantity: number;
@@ -100,7 +124,36 @@ export interface OrderUpdate {
   totalAmount: number;
   /** @nullable */
   notes?: string | null;
+  driverId?: number | null;
   status?: OrderStatus;
+}
+
+export interface CreateDriverInput {
+  name: string;
+  phone: string;
+  status?: DriverStatus;
+}
+
+export interface DriverUpdate {
+  name?: string;
+  phone?: string;
+  status?: DriverStatus;
+}
+
+export interface DriverLocationUpdate {
+  latitude: number;
+  longitude: number;
+}
+
+export interface Settlement {
+  date: string;
+  driverId: number | null;
+  driverName: string;
+  cash: number;
+  yapePlin: number;
+  posCard: number;
+  grandTotal: number;
+  orders: number;
 }
 
 export interface TodaySummary {
@@ -128,5 +181,10 @@ date?: string;
  * Filter by status
  */
 status?: OrderStatus;
+};
+
+export type GetDriverSettlementParams = {
+date: string;
+driverId?: number;
 };
 

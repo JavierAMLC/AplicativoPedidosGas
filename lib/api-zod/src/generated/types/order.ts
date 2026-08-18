@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Customer } from './customer';
+import type { Driver } from './driver';
 import type { OrderStatus } from './orderStatus';
 import type { PaymentMethod } from './paymentMethod';
 
@@ -19,6 +20,8 @@ export interface Order {
   cashAmount?: number | null;
   totalAmount: number;
   status: OrderStatus;
+  driverId?: number | null;
+  driver?: Driver | null;
   notes?: string | null;
   createdAt: Date;
   updatedAt: Date;

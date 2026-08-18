@@ -128,6 +128,18 @@ export const ListOrdersResponseItem = zod.object({
   "cashAmount": zod.number().nullish(),
   "totalAmount": zod.number(),
   "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled']),
+  "driverId": zod.number().nullish(),
+  "driver": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "status": zod.enum(['available', 'busy', 'offline']),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "locationUpdatedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -147,6 +159,7 @@ export const CreateOrderBody = zod.object({
   "customerPhone": zod.string(),
   "customerAddress": zod.string(),
   "customerReference": zod.string(),
+  "driverId": zod.number().nullish(),
   "product": zod.string(),
   "quantity": zod.number().min(1),
   "paymentMethod": zod.enum(['cash', 'yape_plin', 'pos_card']),
@@ -175,6 +188,18 @@ export const CreateOrderResponse = zod.object({
   "cashAmount": zod.number().nullish(),
   "totalAmount": zod.number(),
   "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled']),
+  "driverId": zod.number().nullish(),
+  "driver": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "status": zod.enum(['available', 'busy', 'offline']),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "locationUpdatedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -208,6 +233,18 @@ export const GetOrderResponse = zod.object({
   "cashAmount": zod.number().nullish(),
   "totalAmount": zod.number(),
   "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled']),
+  "driverId": zod.number().nullish(),
+  "driver": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "status": zod.enum(['available', 'busy', 'offline']),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "locationUpdatedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -245,6 +282,18 @@ export const UpdateOrderStatusResponse = zod.object({
   "cashAmount": zod.number().nullish(),
   "totalAmount": zod.number(),
   "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled']),
+  "driverId": zod.number().nullish(),
+  "driver": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "status": zod.enum(['available', 'busy', 'offline']),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "locationUpdatedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -272,6 +321,7 @@ export const UpdateOrderBody = zod.object({
   "cashAmount": zod.number().nullish(),
   "totalAmount": zod.number(),
   "notes": zod.string().nullish(),
+  "driverId": zod.number().nullish(),
   "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled']).optional()
 })
 
@@ -295,6 +345,18 @@ export const UpdateOrderResponse = zod.object({
   "cashAmount": zod.number().nullish(),
   "totalAmount": zod.number(),
   "status": zod.enum(['pending', 'in_transit', 'delivered', 'cancelled']),
+  "driverId": zod.number().nullish(),
+  "driver": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "status": zod.enum(['available', 'busy', 'offline']),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "locationUpdatedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -311,6 +373,116 @@ export const GetTodaySummaryResponse = zod.object({
   "delivered": zod.number(),
   "cancelled": zod.number(),
   "totalRevenue": zod.number()
+})
+
+
+/**
+ * @summary List delivery drivers
+ */
+export const ListDriversResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "status": zod.enum(['available', 'busy', 'offline']),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "locationUpdatedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListDriversResponse = zod.array(ListDriversResponseItem)
+
+
+/**
+ * @summary Create a delivery driver
+ */
+export const CreateDriverBody = zod.object({
+  "name": zod.string(),
+  "phone": zod.string(),
+  "status": zod.enum(['available', 'busy', 'offline']).optional()
+})
+
+export const CreateDriverResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "status": zod.enum(['available', 'busy', 'offline']),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "locationUpdatedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a delivery driver
+ */
+export const UpdateDriverParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDriverBody = zod.object({
+  "name": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "status": zod.enum(['available', 'busy', 'offline']).optional()
+})
+
+export const UpdateDriverResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "status": zod.enum(['available', 'busy', 'offline']),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "locationUpdatedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update the driver's current location
+ */
+export const UpdateDriverLocationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDriverLocationBody = zod.object({
+  "latitude": zod.number(),
+  "longitude": zod.number()
+})
+
+export const UpdateDriverLocationResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "status": zod.enum(['available', 'busy', 'offline']),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "locationUpdatedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get driver payment settlement
+ */
+export const GetDriverSettlementQueryParams = zod.object({
+  "date": zod.coerce.string(),
+  "driverId": zod.coerce.number().optional()
+})
+
+export const GetDriverSettlementResponse = zod.object({
+  "date": zod.string(),
+  "driverId": zod.number().nullable(),
+  "driverName": zod.string(),
+  "cash": zod.number(),
+  "yapePlin": zod.number(),
+  "posCard": zod.number(),
+  "grandTotal": zod.number(),
+  "orders": zod.number()
 })
 
 

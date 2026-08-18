@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, gte, lt } from "drizzle-orm";
-import { db, customersTable, ordersTable } from "@workspace/db";
+import { db, customersTable, driversTable, ordersTable } from "@workspace/db";
 import {
   ListOrdersQueryParams,
   CreateOrderBody,
@@ -36,6 +36,7 @@ function getPeruDayBounds(dateString = getPeruDateString()): [Date, Date] {
 function formatOrder(
   order: typeof ordersTable.$inferSelect,
   customer: typeof customersTable.$inferSelect,
+  driver: typeof driversTable.$inferSelect | null = null,
 ) {
   return {
     id: order.id,
@@ -46,6 +47,20 @@ function formatOrder(
     cashAmount: order.cashAmount != null ? Number(order.cashAmount) : null,
     totalAmount: Number(order.totalAmount),
     status: order.status,
+    driverId: order.driverId ?? null,
+    driver: driver
+      ? {
+          id: driver.id,
+          name: driver.name,
+          phone: driver.phone,
+          status: driver.status,
+          latitude: driver.latitude != null ? Number(driver.latitude) : null,
+          longitude: driver.longitude != null ? Number(driver.longitude) : null,
+          locationUpdatedAt: driver.locationUpdatedAt,
+          createdAt: driver.createdAt,
+          updatedAt: driver.updatedAt,
+        }
+      : null,
     notes: order.notes ?? null,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
@@ -57,9 +72,11 @@ async function findOrder(id: number) {
     .select({
       order: ordersTable,
       customer: customersTable,
+      driver: driversTable,
     })
     .from(ordersTable)
     .innerJoin(customersTable, eq(ordersTable.customerId, customersTable.id))
+    .leftJoin(driversTable, eq(ordersTable.driverId, driversTable.id))
     .where(eq(ordersTable.id, id));
   return row;
 }
@@ -111,13 +128,15 @@ router.get("/orders", async (req, res): Promise<void> => {
     .select({
       order: ordersTable,
       customer: customersTable,
+      driver: driversTable,
     })
     .from(ordersTable)
     .innerJoin(customersTable, eq(ordersTable.customerId, customersTable.id))
+    .leftJoin(driversTable, eq(ordersTable.driverId, driversTable.id))
     .where(and(...conditions))
     .orderBy(ordersTable.createdAt);
 
-  res.json(rows.map((r) => formatOrder(r.order, r.customer)));
+  res.json(rows.map((r) => formatOrder(r.order, r.customer, r.driver)));
 });
 
 router.post("/orders", async (req, res): Promise<void> => {
@@ -175,6 +194,7 @@ router.post("/orders", async (req, res): Promise<void> => {
     .insert(ordersTable)
     .values({
       customerId,
+      driverId: body.driverId ?? null,
       product: body.product,
       quantity: body.quantity,
       paymentMethod: body.paymentMethod,
@@ -190,7 +210,7 @@ router.post("/orders", async (req, res): Promise<void> => {
     res.status(500).json({ error: "No se pudo recuperar el pedido creado." });
     return;
   }
-  res.status(201).json(formatOrder(row.order, row.customer));
+  res.status(201).json(formatOrder(row.order, row.customer, row.driver));
 });
 
 router.get("/orders/:id", async (req, res): Promise<void> => {
@@ -205,7 +225,7 @@ router.get("/orders/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  res.json(formatOrder(row.order, row.customer));
+  res.json(formatOrder(row.order, row.customer, row.driver));
 });
 
 router.patch("/orders/:id", async (req, res): Promise<void> => {
@@ -237,7 +257,7 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  res.json(formatOrder(row.order, row.customer));
+  res.json(formatOrder(row.order, row.customer, row.driver));
 });
 
 router.put("/orders/:id", async (req, res): Promise<void> => {
@@ -275,6 +295,7 @@ router.put("/orders/:id", async (req, res): Promise<void> => {
     .set({
       product: body.product,
       quantity: body.quantity,
+      driverId: body.driverId ?? null,
       paymentMethod: body.paymentMethod,
       cashAmount: body.cashAmount != null ? String(body.cashAmount) : null,
       totalAmount: String(body.totalAmount),
@@ -288,7 +309,7 @@ router.put("/orders/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  res.json(formatOrder(row.order, row.customer));
+  res.json(formatOrder(row.order, row.customer, row.driver));
 });
 
 export default router;

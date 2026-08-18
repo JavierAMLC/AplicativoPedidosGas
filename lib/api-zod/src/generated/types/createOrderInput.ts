@@ -13,6 +13,7 @@ export interface CreateOrderInput {
   customerPhone: string;
   customerAddress: string;
   customerReference: string;
+  driverId?: number | null;
   product: string;
   /** @minimum 1 */
   quantity: number;

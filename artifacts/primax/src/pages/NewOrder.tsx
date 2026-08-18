@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLocation } from "wouter";
-import { useCreateOrder, useListCustomers, getListCustomersQueryKey, getListOrdersQueryKey, getGetTodaySummaryQueryKey } from "@workspace/api-client-react";
+import { useCreateOrder, useListCustomers, useListDrivers, getListCustomersQueryKey, getListDriversQueryKey, getListOrdersQueryKey, getGetTodaySummaryQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSettings } from "@/hooks/use-settings";
 
@@ -38,6 +38,7 @@ const formSchema = z.object({
   cashAmount: z.coerce.number().optional().nullable(),
   totalAmount: z.coerce.number().min(1, "Monto inválido"),
   notes: z.string().default(""),
+  driverId: z.number().nullable().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -57,6 +58,9 @@ export default function NewOrder() {
   const createOrder = useCreateOrder();
   const { settings } = useSettings();
   const products = settings.products;
+  const { data: drivers } = useListDrivers(undefined, {
+    query: { queryKey: getListDriversQueryKey(), refetchOnMount: "always" },
+  });
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
@@ -82,6 +86,7 @@ export default function NewOrder() {
       cashAmount: null,
       totalAmount: 0,
       notes: "",
+      driverId: null,
     },
   });
 

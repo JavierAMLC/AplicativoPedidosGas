@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Download, Search, CalendarDays, RefreshCw, FileText } from "lucide-react";
+import { Download, Search, CalendarDays, RefreshCw, FileText, FileDown } from "lucide-react";
 import { useListOrders, getListOrdersQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,133 @@ const statusClasses: Record<string, string> = {
   delivered: "bg-emerald-500/10 text-emerald-600",
   cancelled: "bg-muted text-muted-foreground",
 };
+
+function pdfSafeText(value: unknown) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, "?");
+}
+
+function pdfEscape(value: unknown) {
+  return pdfSafeText(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function truncatePdfText(value: unknown, maxLength: number) {
+  const text = pdfSafeText(value);
+  return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
+}
+
+type PdfOrder = {
+  id: number;
+  createdAt: string;
+  product: string;
+  quantity: number;
+  totalAmount: number;
+  status: string;
+  notes: string | null;
+  customer: {
+    name: string;
+    phone: string;
+    address: string;
+  };
+};
+
+function createOrdersPdf(date: string, orders: PdfOrder[], totals: { orders: number; quantity: number; revenue: number }) {
+  const pageWidth = 595;
+  const pageHeight = 842;
+  const margin = 32;
+  const pages: string[] = [];
+  let lines: string[] = [];
+  let cursorY = pageHeight - 42;
+
+  const addText = (x: number, y: number, text: unknown, size = 8) => {
+    lines.push(`BT /F1 ${size} Tf ${x} ${y} Td (${pdfEscape(text)}) Tj ET`);
+  };
+
+  const addRule = (y: number) => {
+    lines.push(`0.85 w ${margin} ${y} m ${pageWidth - margin} ${y} l S`);
+  };
+
+  const addPageHeader = (isFirstPage: boolean) => {
+    lines = [];
+    cursorY = pageHeight - 42;
+    addText(margin, cursorY, "PRIMAX GAS", 18);
+    cursorY -= 24;
+    addText(margin, cursorY, `Reporte de pedidos - ${date}`, 10);
+    cursorY -= 16;
+    if (isFirstPage) {
+      addText(margin, cursorY, `Pedidos: ${totals.orders}    Balones: ${totals.quantity}    Ingresos validos: S/ ${totals.revenue.toFixed(2)}`, 9);
+    } else {
+      addText(margin, cursorY, "Continuacion del reporte", 9);
+    }
+    cursorY -= 18;
+    addRule(cursorY);
+    cursorY -= 16;
+    addText(32, cursorY, "Pedido", 7);
+    addText(66, cursorY, "Hora", 7);
+    addText(98, cursorY, "Cliente", 7);
+    addText(180, cursorY, "Telefono", 7);
+    addText(250, cursorY, "Producto", 7);
+    addText(342, cursorY, "Bal.", 7);
+    addText(370, cursorY, "Total", 7);
+    addText(420, cursorY, "Estado", 7);
+    cursorY -= 8;
+    addRule(cursorY);
+    cursorY -= 18;
+  };
+
+  const finishPage = () => {
+    addText(pageWidth - 88, 24, `Pagina ${pages.length + 1}`, 7);
+    pages.push(lines.join("\n"));
+  };
+
+  addPageHeader(true);
+  orders.forEach((order) => {
+    if (cursorY < 62) {
+      finishPage();
+      addPageHeader(false);
+    }
+
+    addText(32, cursorY, `#${String(order.id).padStart(4, "0")}`, 7.5);
+    addText(66, cursorY, format(new Date(order.createdAt), "HH:mm"), 7.5);
+    addText(98, cursorY, truncatePdfText(order.customer.name, 16), 7.5);
+    addText(180, cursorY, truncatePdfText(order.customer.phone, 13), 7.5);
+    addText(250, cursorY, truncatePdfText(order.product, 17), 7.5);
+    addText(342, cursorY, order.quantity, 7.5);
+    addText(370, cursorY, `S/ ${order.totalAmount.toFixed(2)}`, 7.5);
+    addText(420, cursorY, statusLabels[order.status] || order.status, 7.5);
+    cursorY -= 11;
+    addText(66, cursorY, `Direccion: ${truncatePdfText(order.customer.address, 38)}${order.notes ? ` | Notas: ${truncatePdfText(order.notes, 35)}` : ""}`, 7);
+    cursorY -= 18;
+  });
+  finishPage();
+
+  const objects: string[] = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    `<< /Type /Pages /Kids [${pages.map((_, index) => `${4 + index * 2} 0 R`).join(" ")}] /Count ${pages.length} >>`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+
+  pages.forEach((content, index) => {
+    const pageObjectId = 4 + index * 2;
+    const contentObjectId = pageObjectId + 1;
+    objects.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentObjectId} 0 R >>`,
+      `<< /Length ${new TextEncoder().encode(content).length} >>\nstream\n${content}\nendstream`,
+    );
+  });
+
+  let pdf = "%PDF-1.4\n";
+  const offsets = ["0000000000"];
+  objects.forEach((object, index) => {
+    offsets.push(String(new TextEncoder().encode(pdf).length).padStart(10, "0"));
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const crossReferenceOffset = new TextEncoder().encode(pdf).length;
+  pdf += `xref\n0 ${objects.length + 1}\n${offsets.join("\n")}\ntrailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${crossReferenceOffset}\n%%EOF`;
+  return new Blob([pdf], { type: "application/pdf" });
+}
 
 export default function History() {
   const [date, setDate] = useState(peruToday);
@@ -80,6 +207,16 @@ export default function History() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadPdf = () => {
+    const blob = createOrdersPdf(date, filteredOrders, totals);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reporte-pedidos-${date}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-7xl">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -87,10 +224,16 @@ export default function History() {
           <h1 className="text-2xl font-bold tracking-tight">Historial y reportes</h1>
           <p className="text-sm text-muted-foreground">Consulta los pedidos de cualquier día y descarga un reporte.</p>
         </div>
-        <Button onClick={downloadCsv} disabled={!filteredOrders.length} className="gap-2">
-          <Download className="w-4 h-4" />
-          Descargar CSV
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={downloadCsv} disabled={!filteredOrders.length} variant="outline" className="gap-2">
+            <Download className="w-4 h-4" />
+            Descargar CSV
+          </Button>
+          <Button onClick={downloadPdf} disabled={!filteredOrders.length} className="gap-2">
+            <FileDown className="w-4 h-4" />
+            Descargar PDF
+          </Button>
+        </div>
       </div>
 
       <Card className="mb-6 border-border/60">

@@ -22,5 +22,6 @@ export interface OrderUpdate {
   totalAmount: number;
   /** @nullable */
   notes?: string | null;
+  driverId?: number | null;
   status?: OrderStatus;
 }

@@ -2,12 +2,14 @@ import { mysqlTable, varchar, text, int, timestamp, decimal } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { customersTable } from "./customers";
+import { driversTable } from "./drivers";
 
 export const ordersTable = mysqlTable("orders", {
   id: int("id").primaryKey().autoincrement(),
   customerId: int("customer_id")
     .notNull()
     .references(() => customersTable.id),
+  driverId: int("driver_id").references(() => driversTable.id),
   product: varchar("product", { length: 100 }).notNull(),
   quantity: int("quantity").notNull().default(1),
   paymentMethod: varchar("payment_method", { length: 50 }).notNull(),

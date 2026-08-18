@@ -80,6 +80,7 @@ export function OrderEditDialog({ order }: { order: Order }) {
           cashAmount: paymentMethod === "cash" && cashAmount ? Number(cashAmount) : null,
           totalAmount: Number(totalAmount),
           notes: notes.trim() || null,
+          driverId: order.driverId ?? null,
           status: order.status,
         },
       },
